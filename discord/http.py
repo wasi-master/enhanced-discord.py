@@ -701,6 +701,17 @@ class HTTPClient:
     def delete_channel(self, channel_id, *, reason=None):
         return self.request(Route('DELETE', '/channels/{channel_id}', channel_id=channel_id), reason=reason)
 
+    def create_party(self, channel_id, application_id, max_age: int, max_uses: int):
+        payload = {
+            'max_age': max_age,
+            'max_uses': max_uses,
+            'target_application_id': application_id,
+            'target_type': 2,
+            'temporary': False,
+            'validate': None
+        }
+        return self.request(Route("POST", "/channels/{channel_id}/invites", channel_id=channel_id), json=payload)
+
     # Webhook management
 
     def create_webhook(self, channel_id, *, name, avatar=None, reason=None):

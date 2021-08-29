@@ -27,7 +27,7 @@ import asyncio
 
 import discord.abc
 from .permissions import Permissions
-from .enums import ChannelType, try_enum, VoiceRegion
+from .enums import ChannelType, try_enum, VoiceRegion, PartyType
 from .mixins import Hashable
 from . import utils
 from .asset import Asset
@@ -733,6 +733,37 @@ class VoiceChannel(VocalGuildChannel):
         """
 
         await self._edit(options, reason=reason)
+
+    async def create_party(self, application_id: PartyType, max_age: int = 86400 , max_uses: int = 0):
+        """|coro|
+        Creates a party in this voice channel.
+
+        .. versionadded:: 1.7.3.8
+
+        Parameters
+        ----------
+        application_id : PartyType
+            The id of the application the party belongs to. currently any of
+            ``PartyType.youtube``, ``PartyType.poker``, ``PartyType.betrayal``, ``PartyType.fishing``, ``PartyType.chess``.
+        max_age : int, optional
+            Duration in seconds after which the invite expires, by default 1 day.
+        max_uses : int, optional
+            maximum number of times this invite can be used, by default Unlimited.
+
+        Raises
+        -------
+        Forbidden
+            You do not have permissions to create a party.
+        HTTPException
+            Party creation failed.
+
+        Returns
+        --------
+        :class:`Party`
+            The created party.
+        """
+        return Party(await self._state.http.create_party(self.id, application_id.value, max_age=max_age, max_uses=max_uses))
+
 
 class StageChannel(VocalGuildChannel):
     """Represents a Discord guild stage channel.
@@ -1460,6 +1491,29 @@ class GroupChannel(discord.abc.Messageable, Hashable):
         """
 
         await self._state.http.leave_group(self.id)
+
+class Party:
+    """Represents a party in a voice channel."""
+
+    __slots__ = ('code', 'uses', 'max_uses', 'max_age', 'temporary', 'created_at')
+    def __init__(self, data):
+        self.code = data['code']
+        self.uses = data['uses']
+        self.max_uses = data['max_uses']
+        self.max_age = data['max_age']
+        self.temporary = data['temporary']
+        self.created_at = utils.parse_time(data.get('created_at'))
+        # TODO: add more fields here Such as guild, raw data: https://mystb.in/AdvertisersExperiencesMothers.json
+
+    def __repr__(self):
+        return f'<Party code={self.code}>'
+
+    def __str__(self):
+        return f'https://discord.gg/{self.code}'
+
+    def __eq__(self, other):
+        return isinstance(other, Party) and self.code == other.code
+
 
 def _channel_factory(channel_type):
     value = try_enum(ChannelType, channel_type)
